@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# Output folder
+_watermark/
+
+# IDE
+.idea/
+.vscode/
+
+# sth else
+gemini.ps1
