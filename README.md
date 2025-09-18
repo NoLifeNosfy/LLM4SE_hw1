@@ -25,3 +25,17 @@ python src/main.py <folder_path> [options]
 ```bash
 python src/main.py assets --font_size 50 --font_color black --position top-left
 ```
+
+## Testing
+
+To run the tests, first install the development dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Then run pytest:
+
+```bash
+pytest
+```
