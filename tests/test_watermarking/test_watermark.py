@@ -3,13 +3,13 @@ import sys
 from PIL import Image
 
 # Add src directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
 
-from main import add_watermark
+from watermarking.watermark import add_watermark
 
 def test_add_watermark():
     # Create a dummy image
-    assets_dir = os.path.join(os.path.dirname(__file__), '../assets')
+    assets_dir = os.path.join(os.path.dirname(__file__), '../../assets')
     if not os.path.exists(assets_dir):
         os.makedirs(assets_dir)
     
@@ -18,7 +18,7 @@ def test_add_watermark():
     img.save(test_image_path)
 
     # Define output path
-    output_dir = os.path.join(assets_dir, "_watermark")
+    output_dir = os.path.join(assets_dir, "_watermark_test")
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     output_path = os.path.join(output_dir, "test_image_watermarked.png")
@@ -39,3 +39,4 @@ def test_add_watermark():
     # Clean up
     os.remove(test_image_path)
     os.remove(output_path)
+    os.rmdir(output_dir)
