@@ -1,10 +1,14 @@
 import sys
 import os
 import tkinter as tk
-from tkinter import ttk, filedialog
-from PIL import Image, ImageTk
-from tkinterdnd2 import DND_FILES, TkinterDnD
-from file_io.file_handler import get_image_paths
+from tkinter import ttk, messagebox
+from tkinterdnd2 import TkinterDnD
+from gui.import_frame import ImportFrame
+from gui.export_settings_frame import ExportSettingsFrame
+from gui.watermark_list_frame import WatermarkListFrame
+from gui.preview_frame import PreviewFrame
+from gui.watermark_edit_frame import WatermarkEditFrame
+from file_io.file_handler import export_images
 
 # Add the src directory to the Python path to allow for absolute imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -14,151 +18,90 @@ class MainWindow(TkinterDnD.Tk):
         super().__init__()
 
         self.title("Image Watermark Tool")
-        self.geometry("800x600")
-
-        self.imported_files = []
-        self.thumbnails = []  # To keep references to thumbnails
+        self.geometry("1600x800")
 
         # --- Main Layout --- #
         main_frame = ttk.Frame(self, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # --- File Import Area --- #
-        import_frame = ttk.LabelFrame(main_frame, text="Import Images", padding="10")
-        import_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        main_frame.grid_columnconfigure(0, weight=0, minsize=300)
+        main_frame.grid_columnconfigure(1, weight=3)
+        main_frame.grid_columnconfigure(2, weight=1)
+        main_frame.grid_rowconfigure(0, weight=1)
+        main_frame.grid_rowconfigure(1, weight=1)
 
-        # --- Scrollable Image List --- #
-        canvas = tk.Canvas(import_frame, bg='#f0f0f0', highlightthickness=0)
-        scrollbar = ttk.Scrollbar(import_frame, orient="vertical", command=canvas.yview)
-        self.scrollable_frame = ttk.Frame(canvas)
+        # --- Preview Area (Middle) --- #
+        self.preview_frame = PreviewFrame(main_frame)
+        self.preview_frame.grid(row=0, column=1, rowspan=2, sticky="nsew", padx=5, pady=5)
 
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
-        )
+        # --- Image Import Area (Top-Left) --- #
+        self.import_frame = ImportFrame(main_frame, on_image_select_callback=self.preview_frame.display_image)
+        self.import_frame.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
 
-        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
+        # --- Watermark List Area (Bottom-Left) --- #
+        self.watermark_list_frame = WatermarkListFrame(main_frame)
+        self.watermark_list_frame.grid(row=1, column=0, sticky="ns", padx=5, pady=5)
 
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        # --- Drag and Drop Message --- #
-        self.dnd_message_label = ttk.Label(
-            canvas, 
-            text="Drag and drop image files or folders here", 
-            background='#f0f0f0', 
-            foreground='#a0a0a0',
-            font=("Arial", 12)
-        )
-        self.dnd_message_label.place(relx=0.5, rely=0.5, anchor='center')
-        
-        # --- Drag and Drop Binding --- #
-        canvas.drop_target_register(DND_FILES)
-        canvas.dnd_bind('<<Drop>>', self.handle_drop)
-
-        # Buttons for adding files/folders
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=5)
-
-        add_files_button = ttk.Button(button_frame, text="Add File(s)", command=self.add_files)
-        add_files_button.pack(side=tk.LEFT, padx=5)
-
-        add_folder_button = ttk.Button(button_frame, text="Add Folder", command=self.add_folder)
-        add_folder_button.pack(side=tk.LEFT, padx=5)
-
-        # --- Watermark Configuration Area (Placeholder) --- #
-        config_frame = ttk.LabelFrame(main_frame, text="Watermark Settings", padding="10")
-        config_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(config_frame, text="Configuration options will go here.").pack()
+        # --- Watermark Edit Area (Right) --- #
+        self.watermark_edit_frame = WatermarkEditFrame(main_frame)
+        self.watermark_edit_frame.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
 
         # --- Action Button --- #
-        start_button = ttk.Button(main_frame, text="Apply Watermark to All")
-        start_button.pack(pady=10)
-        
-        self.update_image_list() # Initial call to show the message
+        export_button = ttk.Button(main_frame, text="Export All Images", command=self.open_export_settings)
+        export_button.grid(row=1, column=2, sticky="se", padx=5, pady=5)
 
-    def add_image_paths(self, paths):
-        """Adds a list of paths to the imported files list, avoiding duplicates."""
-        for path in paths:
-            if path not in self.imported_files:
-                self.imported_files.append(path)
+    def open_export_settings(self):
+        ExportDialog(self)
 
-    def handle_drop(self, event):
-        """Handles files dropped onto the canvas."""
-        dropped_paths = self.tk.splitlist(event.data)
-        paths_to_add = []
-        for path in dropped_paths:
-            paths_to_add.extend(list(get_image_paths(path, recursive=True)))
-        self.add_image_paths(paths_to_add)
-        self.update_image_list()
+class ExportDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.transient(parent)
+        self.title("Export Settings")
+        self.parent = parent
+        self.grab_set()
 
-    def add_files(self):
-        """Open file dialog to select and add multiple image files."""
-        file_paths = filedialog.askopenfilenames(
-            title="Select Image Files",
-            filetypes=[
-                ("Image Files", "*.png *.jpg *.jpeg *.bmp *.gif"),
-                ("All Files", "*.*"),
-            ]
+        self.export_settings_frame = ExportSettingsFrame(self)
+        self.export_settings_frame.pack(padx=10, pady=10)
+
+        button_frame = ttk.Frame(self)
+        button_frame.pack(padx=10, pady=10, fill=tk.X)
+
+        export_button = ttk.Button(button_frame, text="Export", command=self.export_images)
+        export_button.pack(side=tk.RIGHT, padx=5)
+
+        cancel_button = ttk.Button(button_frame, text="Cancel", command=self.destroy)
+        cancel_button.pack(side=tk.RIGHT)
+
+    def export_images(self):
+        settings = self.export_settings_frame.get_settings()
+        output_dir = settings["output_dir"]
+        imported_files = self.parent.import_frame.get_imported_files()
+
+        if not imported_files:
+            messagebox.showwarning("No Files", "Please import images before exporting.", parent=self)
+            return
+
+        if not output_dir:
+            messagebox.showwarning("No Output Directory", "Please select an output directory.", parent=self)
+            return
+
+        try:
+            scale_width = int(settings["scale_width"]) if settings["scale_width"] else None
+            scale_height = int(settings["scale_height"]) if settings["scale_height"] else None
+        except ValueError:
+            messagebox.showerror("Invalid Scale", "Please enter valid integers for scaling.", parent=self)
+            return
+
+        export_images(
+            image_paths=imported_files,
+            output_dir=output_dir,
+            prefix=settings["prefix"],
+            suffix=settings["suffix"],
+            scale_width=scale_width,
+            scale_height=scale_height,
+            jpeg_quality=settings["jpeg_quality"]
         )
-        if file_paths:
-            self.add_image_paths(file_paths)
-            self.update_image_list()
 
-    def add_folder(self):
-        """Open directory dialog to select and add a folder of images."""
-        folder_path = filedialog.askdirectory(title="Select Folder")
-        if folder_path:
-            image_paths = get_image_paths(folder_path, recursive=False)
-            self.add_image_paths(image_paths)
-            self.update_image_list()
-
-    def remove_image(self, file_path):
-        """Removes an image from the imported list."""
-        if file_path in self.imported_files:
-            self.imported_files.remove(file_path)
-        self.update_image_list()
-
-    def update_image_list(self):
-        """Clears and repopulates the scrollable frame with image thumbnails and filenames."""
-        for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
-        
-        self.thumbnails.clear()
-
-        if not self.imported_files:
-            self.dnd_message_label.place(relx=0.5, rely=0.5, anchor='center')
-        else:
-            self.dnd_message_label.place_forget()
-
-        for file_path in self.imported_files:
-            try:
-                item_frame = ttk.Frame(self.scrollable_frame, padding=5)
-                item_frame.pack(fill=tk.X, expand=True)
-                
-                item_frame.columnconfigure(1, weight=1)
-
-                img = Image.open(file_path)
-                img.thumbnail((50, 50))
-                thumb = ImageTk.PhotoImage(img)
-                self.thumbnails.append(thumb)
-
-                thumb_label = ttk.Label(item_frame, image=thumb)
-                thumb_label.grid(row=0, column=0, padx=5, sticky='w')
-
-                filename = os.path.basename(file_path)
-                name_label = ttk.Label(item_frame, text=filename, anchor="w")
-                name_label.grid(row=0, column=1, padx=5, sticky='ew')
-
-                remove_button = ttk.Button(
-                    item_frame, 
-                    text="Remove", 
-                    command=lambda p=file_path: self.remove_image(p)
-                )
-                remove_button.grid(row=0, column=2, padx=5, sticky='e')
-
-            except Exception as e:
-                print(f"Error processing {file_path}: {e}")
+        messagebox.showinfo("Export Complete", f"Exported {len(imported_files)} images to \n{output_dir}", parent=self)
+        self.destroy()
