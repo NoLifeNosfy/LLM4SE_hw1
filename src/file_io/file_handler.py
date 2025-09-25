@@ -2,11 +2,28 @@ import os
 from datetime import datetime
 from PIL import Image
 
-def get_image_files(folder_path):
-    """Yields paths of image files in a folder."""
-    for filename in os.listdir(folder_path):
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-            yield os.path.join(folder_path, filename)
+def get_image_paths(path, recursive=False):
+    """
+    Yields image file paths from a given path.
+
+    :param path: Path to a file or directory.
+    :param recursive: If True, searches subdirectories recursively.
+    """
+    image_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')
+
+    if os.path.isfile(path):
+        if path.lower().endswith(image_extensions):
+            yield path
+    elif os.path.isdir(path):
+        if recursive:
+            for root, _, files in os.walk(path):
+                for filename in files:
+                    if filename.lower().endswith(image_extensions):
+                        yield os.path.join(root, filename)
+        else:
+            for filename in os.listdir(path):
+                if filename.lower().endswith(image_extensions):
+                    yield os.path.join(path, filename)
 
 def get_watermark_text(image_path):
     """Extracts creation date from image EXIF data, or uses modification date as a fallback."""
