@@ -17,10 +17,18 @@ class TextWatermarkFrame(ttk.Frame):
         # Font Family
         ttk.Label(self, text="Font:").grid(row=1, column=0, sticky="w", pady=2)
         self.font_family = ttk.Combobox(self, state="readonly")
-        self.font_family['values'] = sorted(font.families())
+        # 使用固定的字体列表，确保与watermark.py中的字体映射表一致
+        self.font_family['values'] = [
+            "SimSun",           # 宋体
+            "Microsoft YaHei",  # 微软雅黑
+            "SimHei",           # 黑体
+            "KaiTi",            # 楷体
+            "FangSong",         # 仿宋
+            "NSimSun",          # 新宋体
+            "Arial"             # Arial
+        ]
         self.font_family.grid(row=1, column=1, columnspan=2, sticky="ew", pady=2)
-        if self.font_family['values']:
-            self.font_family.set(self.font_family['values'][0])
+        self.font_family.set("SimSun")  # 默认设置为宋体
 
         # Font Size, Bold, Italic
         style_frame = ttk.Frame(self)

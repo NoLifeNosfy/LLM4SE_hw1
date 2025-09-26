@@ -20,17 +20,67 @@ def apply_text_watermark(image, settings):
     draw = ImageDraw.Draw(txt_layer)
 
     # Font
-    font_family = settings.get("font_family", "arial.ttf")
-    font_size = settings.get("font_size", 36)
-    try:
-        font = ImageFont.truetype(font_family, font_size)
-    except IOError:
-        font = ImageFont.load_default()
+    font_family = settings.get("font_family", "SimSun")  # 默认使用宋体
+    font_size = int(settings.get("font_size", 36))  # 确保字体大小是整数
+    
+    # 字体名称到Windows字体文件的映射
+    font_name_to_file = {
+        "SimSun": "C:\\Windows\\Fonts\\simsun.ttc",      # 宋体
+        "Microsoft YaHei": "C:\\Windows\\Fonts\\msyh.ttc",  # 微软雅黑
+        "SimHei": "C:\\Windows\\Fonts\\simhei.ttf",      # 黑体
+        "KaiTi": "C:\\Windows\\Fonts\\simkai.ttf",       # 楷体
+        "FangSong": "C:\\Windows\\Fonts\\simfang.ttf",   # 仿宋
+        "NSimSun": "C:\\Windows\\Fonts\\simsun.ttc",     # 新宋体
+        "Arial": "C:\\Windows\\Fonts\\arial.ttf"         # Arial
+    }
+    
+    # 备用字体文件列表
+    fallback_font_files = [
+        "C:\\Windows\\Fonts\\simsun.ttc",    # 宋体
+        "C:\\Windows\\Fonts\\msyh.ttc",      # 微软雅黑
+        "C:\\Windows\\Fonts\\simhei.ttf",    # 黑体
+        "C:\\Windows\\Fonts\\arial.ttf"      # Arial
+    ]
+    
+    # 尝试使用用户选择的字体名称对应的字体文件
+    font = None
+    if font_family in font_name_to_file:
+        try:
+            font = ImageFont.truetype(font_name_to_file[font_family], size=font_size)
+        except IOError:
+            pass
+    
+    # 如果没有找到对应的字体文件或加载失败，尝试直接使用字体名称
+    if font is None:
+        try:
+            font = ImageFont.truetype(font_family, size=font_size)
+        except IOError:
+            # 如果直接使用字体名称失败，尝试使用备用字体文件
+            for font_file in fallback_font_files:
+                try:
+                    font = ImageFont.truetype(font_file, size=font_size)
+                    break  # 找到可用字体后跳出循环
+                except IOError:
+                    continue
+            
+            # 如果所有备用字体文件都失败，使用默认字体
+        if font is None:
+            font = ImageFont.load_default()
 
     # Text
     text = settings.get("text", "")
     if not text:
         return image # Return original image if no text
+    
+    # 确保文本是Unicode编码，处理可能的编码问题
+    if not isinstance(text, str):
+        try:
+            text = str(text, 'utf-8')
+        except (TypeError, UnicodeDecodeError):
+            try:
+                text = str(text)
+            except:
+                pass
 
     # Position
     position = settings.get("position", "Center")

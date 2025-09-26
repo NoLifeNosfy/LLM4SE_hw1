@@ -91,7 +91,10 @@ class WatermarkEditFrame(ttk.LabelFrame):
         settings["rotation"] = self.rotation_var.get()
         settings["position"] = self.position_var.get()
 
-        watermarked_image = apply_text_watermark(self.preview_frame.original_image, settings)
+        # 使用原始图像应用水印，而不是当前显示的图像
+        # 这样可以确保每次都是在原始图像上添加水印，而不是叠加
+        watermarked_image = apply_text_watermark(self.preview_frame.original_image.copy(), settings)
         
         if watermarked_image:
+            # 更新预览显示，但保留原始图像不变
             self.preview_frame.update_image_display(watermarked_image)

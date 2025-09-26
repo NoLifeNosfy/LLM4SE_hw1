@@ -8,6 +8,7 @@ class PreviewFrame(ttk.LabelFrame):
         super().__init__(parent, text="Preview", padding="10")
         self.image_path = None
         self.original_image = None
+        self.current_display_image = None
         self.displayed_image = None
         self.image_id = None
 
@@ -21,21 +22,27 @@ class PreviewFrame(ttk.LabelFrame):
             self.image_path = image_source
             try:
                 self.original_image = Image.open(image_source)
+                self.current_display_image = self.original_image.copy()
                 self.update_image_display()
             except Exception as e:
                 print(f"Error opening image {image_source}: {e}")
                 self.clear_preview()
         elif isinstance(image_source, Image.Image):
             self.original_image = image_source
+            self.current_display_image = self.original_image.copy()
             self.update_image_display()
         else:
             self.clear_preview()
 
     def update_image_display(self, new_image=None):
         if new_image:
-            self.original_image = new_image
+            # 只更新显示的图像，不修改原始图像
+            self.current_display_image = new_image
+        else:
+            # 如果没有提供新图像，使用原始图像
+            self.current_display_image = self.original_image
 
-        if not self.original_image:
+        if not self.current_display_image:
             return
 
         canvas_width = self.canvas.winfo_width()
@@ -44,7 +51,7 @@ class PreviewFrame(ttk.LabelFrame):
         if canvas_width <= 1 or canvas_height <= 1: # Canvas not yet sized
             return
 
-        img_copy = self.original_image.copy()
+        img_copy = self.current_display_image.copy()
         img_copy.thumbnail((canvas_width, canvas_height), Image.Resampling.LANCZOS)
 
         self.displayed_image = ImageTk.PhotoImage(img_copy)
@@ -67,5 +74,6 @@ class PreviewFrame(ttk.LabelFrame):
             self.canvas.delete(self.image_id)
         self.image_path = None
         self.original_image = None
+        self.current_display_image = None
         self.displayed_image = None
         self.image_id = None
