@@ -58,8 +58,8 @@ class WatermarkEditFrame(ttk.LabelFrame):
         opacity_label = ttk.Label(opacity_rotation_frame, text="Opacity:")
         opacity_label.pack(side=tk.LEFT, padx=(0, 5))
 
-        self.opacity_var = tk.DoubleVar(value=1.0)
-        opacity_scale = ttk.Scale(opacity_rotation_frame, from_=0.0, to=1.0, orient=tk.HORIZONTAL, variable=self.opacity_var)
+        self.opacity_var = tk.IntVar(value=100)
+        opacity_scale = ttk.Scale(opacity_rotation_frame, from_=0, to=100, orient=tk.HORIZONTAL, variable=self.opacity_var)
         opacity_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # Rotation
@@ -85,9 +85,8 @@ class WatermarkEditFrame(ttk.LabelFrame):
             return
 
         settings = self.text_watermark_frame.get_settings()
-        
         # Add common settings
-        settings["opacity"] = self.opacity_var.get()
+        settings["opacity"] = self.opacity_var.get() / 100.0
         settings["rotation"] = self.rotation_var.get()
         settings["position"] = self.position_var.get()
 

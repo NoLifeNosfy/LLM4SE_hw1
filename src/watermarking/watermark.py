@@ -129,6 +129,12 @@ def apply_text_watermark(image, settings):
     rotation = settings.get("rotation", 0)
     if rotation != 0:
         txt_layer = txt_layer.rotate(rotation, expand=True, center=(x + text_width / 2, y + text_height / 2))
+        # 修复尺寸不一致：将旋转后的txt_layer居中粘贴到与原图同尺寸的新透明层
+        new_txt_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
+        paste_x = (image.width - txt_layer.width) // 2
+        paste_y = (image.height - txt_layer.height) // 2
+        new_txt_layer.paste(txt_layer, (paste_x, paste_y), txt_layer)
+        txt_layer = new_txt_layer
 
     # Composite the text layer onto the image
     watermarked_image = Image.alpha_composite(image.convert("RGBA"), txt_layer)
