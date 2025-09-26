@@ -16,20 +16,25 @@ class PreviewFrame(ttk.LabelFrame):
 
         self.canvas.bind("<Configure>", self.on_resize)
 
-    def display_image(self, image_path):
-        if not image_path:
-            self.clear_preview()
-            return
-
-        self.image_path = image_path
-        try:
-            self.original_image = Image.open(image_path)
+    def display_image(self, image_source):
+        if isinstance(image_source, str):
+            self.image_path = image_source
+            try:
+                self.original_image = Image.open(image_source)
+                self.update_image_display()
+            except Exception as e:
+                print(f"Error opening image {image_source}: {e}")
+                self.clear_preview()
+        elif isinstance(image_source, Image.Image):
+            self.original_image = image_source
             self.update_image_display()
-        except Exception as e:
-            print(f"Error opening image {image_path}: {e}")
+        else:
             self.clear_preview()
 
-    def update_image_display(self):
+    def update_image_display(self, new_image=None):
+        if new_image:
+            self.original_image = new_image
+
         if not self.original_image:
             return
 

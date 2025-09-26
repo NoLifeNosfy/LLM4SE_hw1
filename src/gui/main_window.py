@@ -43,7 +43,7 @@ class MainWindow(TkinterDnD.Tk):
         self.watermark_list_frame.grid(row=1, column=0, sticky="ns", padx=5, pady=5)
 
         # --- Watermark Edit Area (Right) --- #
-        self.watermark_edit_frame = WatermarkEditFrame(main_frame)
+        self.watermark_edit_frame = WatermarkEditFrame(main_frame, self.preview_frame)
         self.watermark_edit_frame.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
 
         # --- Action Button --- #

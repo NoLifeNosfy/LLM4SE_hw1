@@ -1,5 +1,5 @@
 import os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageColor
 
 # A dictionary to map color names to RGBA values
 COLOR_MAP = {
@@ -10,52 +10,76 @@ COLOR_MAP = {
     "blue": (0, 0, 255, 128),
 }
 
-def add_watermark(image_path, text, output_path, font_size=40, font_color="white", position="bottom-right"):
-    """Adds a text watermark to an image."""
+def apply_text_watermark(image, settings):
+    """Applies a text watermark to a PIL image based on a settings dictionary."""
+    if not image:
+        return None
+
+    # Create a transparent layer for the text
+    txt_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(txt_layer)
+
+    # Font
+    font_family = settings.get("font_family", "arial.ttf")
+    font_size = settings.get("font_size", 36)
     try:
-        image = Image.open(image_path).convert("RGBA")
-        txt = Image.new("RGBA", image.size, (255, 255, 255, 0))
+        font = ImageFont.truetype(font_family, font_size)
+    except IOError:
+        font = ImageFont.load_default()
 
-        try:
-            font = ImageFont.truetype("arial.ttf", font_size)
-        except IOError:
-            font = ImageFont.load_default()
+    # Text
+    text = settings.get("text", "")
+    if not text:
+        return image # Return original image if no text
 
-        draw = ImageDraw.Draw(txt)
+    # Position
+    position = settings.get("position", "Center")
+    text_bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+    margin = 10
 
-        # Get text size
-        text_bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
+    if "Top" in position:
+        y = margin
+    elif "Middle" in position or "Center" in position:
+        y = (image.height - text_height) / 2
+    elif "Bottom" in position:
+        y = image.height - text_height - margin
+    else:
+        y = (image.height - text_height) / 2 # Default to center
 
-        # Position logic
-        pos_y, pos_x = position.split('-')
-        margin = 10
+    if "Left" in position:
+        x = margin
+    elif "Center" in position:
+        x = (image.width - text_width) / 2
+    elif "Right" in position:
+        x = image.width - text_width - margin
+    else:
+        x = (image.width - text_width) / 2 # Default to center
 
-        if pos_x == 'left':
-            x = margin
-        elif pos_x == 'center':
-            x = (image.width - text_width) / 2
-        elif pos_x == 'right':
-            x = image.width - text_width - margin
-        else: # default to right
-            x = image.width - text_width - margin
+    # Shadow
+    if settings.get("shadow", False):
+        shadow_size = settings.get("shadow_size", 2)
+        shadow_color = (0, 0, 0, 128) # Default shadow color
+        draw.text((x + shadow_size, y + shadow_size), text, font=font, fill=shadow_color)
 
-        if pos_y == 'top':
-            y = margin
-        elif pos_y == 'middle':
-            y = (image.height - text_height) / 2
-        elif pos_y == 'bottom':
-            y = image.height - text_height - margin
-        else: # default to bottom
-            y = image.height - text_height - margin
+    # Stroke
+    if settings.get("stroke", False):
+        stroke_size = settings.get("stroke_size", 1)
+        stroke_color = settings.get("stroke_color", "#000000")
+        draw.text((x, y), text, font=font, fill=stroke_color, stroke_width=stroke_size, stroke_fill=stroke_color)
 
-        color = COLOR_MAP.get(font_color.lower(), (255, 255, 255, 128)) # Default to white
+    # Main Text
+    font_color = settings.get("font_color", "#000000")
+    opacity = int(settings.get("opacity", 1.0) * 255)
+    font_color_rgba = ImageColor.getrgb(font_color) + (opacity,)
+    draw.text((x, y), text, font=font, fill=font_color_rgba)
 
-        draw.text((x, y), text, font=font, fill=color)
+    # Rotation
+    rotation = settings.get("rotation", 0)
+    if rotation != 0:
+        txt_layer = txt_layer.rotate(rotation, expand=True, center=(x + text_width / 2, y + text_height / 2))
 
-        watermarked = Image.alpha_composite(image, txt)
-        watermarked.convert("RGB").save(output_path)
-        print(f"Watermarked {os.path.basename(image_path)}")
-    except Exception as e:
-        print(f"Could not process {os.path.basename(image_path)}: {e}")
+    # Composite the text layer onto the image
+    watermarked_image = Image.alpha_composite(image.convert("RGBA"), txt_layer)
+    return watermarked_image
