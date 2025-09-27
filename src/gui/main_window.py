@@ -46,6 +46,9 @@ class MainWindow(TkinterDnD.Tk):
         self.watermark_edit_frame = WatermarkEditFrame(main_frame, self.preview_frame)
         self.watermark_edit_frame.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
 
+        # Set the callback for drag-and-drop communication
+        self.preview_frame.on_watermark_drag_callback = self.watermark_edit_frame.on_watermark_drag
+
         # --- Action Button --- #
         export_button = ttk.Button(main_frame, text="Export All Images", command=self.open_export_settings)
         export_button.grid(row=1, column=2, sticky="se", padx=5, pady=5)

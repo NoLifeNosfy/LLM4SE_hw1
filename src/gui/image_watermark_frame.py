@@ -56,7 +56,7 @@ class ImageWatermarkFrame(ttk.Frame):
         ttk.Button(scale_frame, text="应用缩放", command=self.apply_scale).pack(side=tk.RIGHT, padx=5)
         
         # 图片预览区域
-        preview_frame = ttk.LabelFrame(self, text="水印预览(预览框大小为200*200，水印过大，预览框也只会显示缩放后的水印)", padding=10)
+        preview_frame = ttk.LabelFrame(self, text="水印预览(预览框大小为200*200，导入图片后会缩放到预览框大小)", padding=10)
         preview_frame.pack(fill=tk.BOTH, expand=False, pady=10)
         
         self.image_preview_label = ttk.Label(preview_frame)
@@ -193,6 +193,24 @@ class ImageWatermarkFrame(ttk.Frame):
             self.watermark_preview = ImageTk.PhotoImage(preview_img)
             self.image_preview_label.config(image=self.watermark_preview)
     
+    def get_settings(self):
+        """Returns the current image watermark settings."""
+        try:
+            width_scale = float(self.width_scale_var.get())
+        except ValueError:
+            width_scale = 1.0
+            
+        try:
+            height_scale = float(self.height_scale_var.get())
+        except ValueError:
+            height_scale = 1.0
+
+        return {
+            "width_scale": width_scale,
+            "height_scale": height_scale,
+            "bind_ratio": self.bind_ratio_var.get()
+        }
+
     def get_watermark_image(self):
         """返回当前选择的水印图片"""
         return self.watermark_image

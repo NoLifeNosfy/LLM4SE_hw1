@@ -1,116 +1,24 @@
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 
-# A dictionary to map color names to RGBA values
-COLOR_MAP = {
-    "white": (255, 255, 255, 128),
-    "black": (0, 0, 0, 128),
-    "red": (255, 0, 0, 128),
-    "green": (0, 255, 0, 128),
-    "blue": (0, 0, 255, 128),
-}
-
-def apply_image_watermark(image, watermark_image, settings):
-    """Applies an image watermark to a PIL image based on a settings dictionary.
-    
-    Args:
-        image: The original PIL image to apply the watermark to
-        watermark_image: The PIL image to use as a watermark
-        settings: Dictionary containing watermark settings (opacity, position, etc.)
-        
-    Returns:
-        A new PIL image with the watermark applied
-    """
-    if not image or not watermark_image:
-        return image
-    
-    # Convert images to RGBA if they aren't already
-    if image.mode != 'RGBA':
-        image = image.convert('RGBA')
-    if watermark_image.mode != 'RGBA':
-        watermark_image = watermark_image.convert('RGBA')
-    
-    # 获取图像尺寸
-    orig_width, orig_height = image.size
-    wm_width, wm_height = watermark_image.size
-    
-    # Apply opacity
-    opacity = float(settings.get("opacity", 1.0))
-    if opacity < 1.0:
-        # Create a new image with an alpha channel for transparency
-        alpha = watermark_image.getchannel('A')
-        alpha = alpha.point(lambda x: int(x * opacity))
-        watermark_image.putalpha(alpha)
-    
-    # Determine position
-    position = settings.get("position", "Center")
-    
-    if "Left" in position:
-        x = 10  # margin
-    elif "Right" in position:
-        x = orig_width - wm_width - 10
-    else:  # Center
-        x = (orig_width - wm_width) // 2
-        
-    if "Top" in position:
-        y = 10  # margin
-    elif "Bottom" in position:
-        y = orig_height - wm_height - 10
-    else:  # Middle or Center
-        y = (orig_height - wm_height) // 2
-    
-    # Apply rotation if specified
-    rotation = settings.get("rotation", 0)
-    if rotation != 0:
-        watermark_image = watermark_image.rotate(rotation, expand=True, resample=Image.BICUBIC)
-        # Recalculate width and height after rotation
-        wm_width, wm_height = watermark_image.size
-        
-        # Adjust position to keep it centered after rotation
-        if "Center" in position or "Middle" in position:
-            x = (orig_width - wm_width) // 2
-            y = (orig_height - wm_height) // 2
-    
-    # Create a new image to paste the watermark onto
-    result = image.copy()
-    # Paste using the watermark as its own mask to preserve transparency
-    result.paste(watermark_image, (x, y), watermark_image)
-    
-    return result
-
-def apply_text_watermark(image, settings):
-    """Applies a text watermark to a PIL image based on a settings dictionary."""
-    if not image:
-        return None
-
-    # Create a transparent layer for the text
-    txt_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
-    draw = ImageDraw.Draw(txt_layer)
-
-    # Font
-    font_family = settings.get("font_family", "SimSun")  # 默认使用宋体
-    font_size = int(settings.get("font_size", 36))  # 确保字体大小是整数
-    
-    # 字体名称到Windows字体文件的映射
+def _get_font(font_family, font_size):
+    """Helper function to load a font, with fallbacks."""
     font_name_to_file = {
-        "SimSun": "C:\\Windows\\Fonts\\simsun.ttc",      # 宋体
-        "Microsoft YaHei": "C:\\Windows\\Fonts\\msyh.ttc",  # 微软雅黑
-        "SimHei": "C:\\Windows\\Fonts\\simhei.ttf",      # 黑体
-        "KaiTi": "C:\\Windows\\Fonts\\simkai.ttf",       # 楷体
-        "FangSong": "C:\\Windows\\Fonts\\simfang.ttf",   # 仿宋
-        "NSimSun": "C:\\Windows\\Fonts\\simsun.ttc",     # 新宋体
-        "Arial": "C:\\Windows\\Fonts\\arial.ttf"         # Arial
+        "SimSun": "C:\\Windows\\Fonts\\simsun.ttc",
+        "Microsoft YaHei": "C:\\Windows\\Fonts\\msyh.ttc",
+        "SimHei": "C:\\Windows\\Fonts\\simhei.ttf",
+        "KaiTi": "C:\\Windows\\Fonts\\simkai.ttf",
+        "FangSong": "C:\\Windows\\Fonts\\simfang.ttf",
+        "NSimSun": "C:\\Windows\\Fonts\\simsun.ttc",
+        "Arial": "C:\\Windows\\Fonts\\arial.ttf"
     }
-    
-    # 备用字体文件列表
     fallback_font_files = [
-        "C:\\Windows\\Fonts\\simsun.ttc",    # 宋体
-        "C:\\Windows\\Fonts\\msyh.ttc",      # 微软雅黑
-        "C:\\Windows\\Fonts\\simhei.ttf",    # 黑体
-        "C:\\Windows\\Fonts\\arial.ttf"      # Arial
+        "C:\\Windows\\Fonts\\simsun.ttc",
+        "C:\\Windows\\Fonts\\msyh.ttc",
+        "C:\\Windows\\Fonts\\simhei.ttf",
+        "C:\\Windows\\Fonts\\arial.ttf"
     ]
     
-    # 尝试使用用户选择的字体名称对应的字体文件
     font = None
     if font_family in font_name_to_file:
         try:
@@ -118,72 +26,52 @@ def apply_text_watermark(image, settings):
         except IOError:
             pass
     
-    # 如果没有找到对应的字体文件或加载失败，尝试直接使用字体名称
     if font is None:
         try:
             font = ImageFont.truetype(font_family, size=font_size)
         except IOError:
-            # 如果直接使用字体名称失败，尝试使用备用字体文件
             for font_file in fallback_font_files:
                 try:
                     font = ImageFont.truetype(font_file, size=font_size)
-                    break  # 找到可用字体后跳出循环
+                    break
                 except IOError:
                     continue
-            
-            # 如果所有备用字体文件都失败，使用默认字体
-        if font is None:
-            font = ImageFont.load_default()
+    
+    if font is None:
+        font = ImageFont.load_default()
+        
+    return font
 
-    # Text
+def create_text_watermark_layer(settings):
+    """Creates a transparent PIL image layer with the text watermark."""
     text = settings.get("text", "")
     if not text:
-        return image # Return original image if no text
-    
-    # 确保文本是Unicode编码，处理可能的编码问题
-    if not isinstance(text, str):
-        try:
-            text = str(text, 'utf-8')
-        except (TypeError, UnicodeDecodeError):
-            try:
-                text = str(text)
-            except:
-                pass
+        return None
 
-    # Position
-    position = settings.get("position", "Center")
-    text_bbox = draw.textbbox((0, 0), text, font=font)
+    font_family = settings.get("font_family", "SimSun")
+    font_size = int(settings.get("font_size", 36))
+    font = _get_font(font_family, font_size)
+
+    # Get text size including stroke
+    stroke_size = settings.get("stroke_size", 0) if settings.get("stroke", False) else 0
+    text_bbox = ImageDraw.Draw(Image.new("RGBA", (1,1))).textbbox((0, 0), text, font=font, stroke_width=stroke_size)
     text_width = text_bbox[2] - text_bbox[0]
     text_height = text_bbox[3] - text_bbox[1]
-    margin = 10
 
-    if "Top" in position:
-        y = margin
-    elif "Middle" in position or "Center" in position:
-        y = (image.height - text_height) / 2
-    elif "Bottom" in position:
-        y = image.height - text_height - margin
-    else:
-        y = (image.height - text_height) / 2 # Default to center
+    # Create a layer just big enough for the text
+    layer = Image.new("RGBA", (text_width, text_height), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(layer)
 
-    if "Left" in position:
-        x = margin
-    elif "Center" in position:
-        x = (image.width - text_width) / 2
-    elif "Right" in position:
-        x = image.width - text_width - margin
-    else:
-        x = (image.width - text_width) / 2 # Default to center
+    x, y = -text_bbox[0], -text_bbox[1]
 
     # Shadow
     if settings.get("shadow", False):
         shadow_size = settings.get("shadow_size", 2)
-        shadow_color = (0, 0, 0, 128) # Default shadow color
-        draw.text((x + shadow_size, y + shadow_size), text, font=font, fill=shadow_color)
+        shadow_color = (0, 0, 0, 128)
+        draw.text((x + shadow_size, y + shadow_size), text, font=font, fill=shadow_color, stroke_width=stroke_size)
 
     # Stroke
     if settings.get("stroke", False):
-        stroke_size = settings.get("stroke_size", 1)
         stroke_color = settings.get("stroke_color", "#000000")
         draw.text((x, y), text, font=font, fill=stroke_color, stroke_width=stroke_size, stroke_fill=stroke_color)
 
@@ -196,14 +84,99 @@ def apply_text_watermark(image, settings):
     # Rotation
     rotation = settings.get("rotation", 0)
     if rotation != 0:
-        txt_layer = txt_layer.rotate(rotation, expand=True, center=(x + text_width / 2, y + text_height / 2))
-        # 修复尺寸不一致：将旋转后的txt_layer居中粘贴到与原图同尺寸的新透明层
-        new_txt_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
-        paste_x = (image.width - txt_layer.width) // 2
-        paste_y = (image.height - txt_layer.height) // 2
-        new_txt_layer.paste(txt_layer, (paste_x, paste_y), txt_layer)
-        txt_layer = new_txt_layer
+        layer = layer.rotate(rotation, expand=True, resample=Image.BICUBIC)
 
-    # Composite the text layer onto the image
-    watermarked_image = Image.alpha_composite(image.convert("RGBA"), txt_layer)
+    return layer
+
+def create_image_watermark_layer(watermark_image, settings):
+    """Creates a transparent PIL image layer for the image watermark."""
+    if not watermark_image:
+        return None
+
+    if watermark_image.mode != 'RGBA':
+        watermark_image = watermark_image.convert('RGBA')
+
+    # Opacity
+    opacity = float(settings.get("opacity", 1.0))
+    if opacity < 1.0:
+        alpha = watermark_image.getchannel('A')
+        alpha = alpha.point(lambda i: int(i * opacity))
+        watermark_image.putalpha(alpha)
+
+    # Rotation
+    rotation = settings.get("rotation", 0)
+    if rotation != 0:
+        watermark_image = watermark_image.rotate(rotation, expand=True, resample=Image.BICUBIC)
+    
+    return watermark_image
+
+def _calculate_position(image_size, watermark_size, position_str, margin=10):
+    """Calculates x, y coordinates from a position string."""
+    img_w, img_h = image_size
+    wm_w, wm_h = watermark_size
+
+    if "Left" in position_str:
+        x = margin
+    elif "Right" in position_str:
+        x = img_w - wm_w - margin
+    else: # Center
+        x = (img_w - wm_w) // 2
+        
+    if "Top" in position_str:
+        y = margin
+    elif "Bottom" in position_str:
+        y = img_h - wm_h - margin
+    else: # Middle or Center
+        y = (img_h - wm_h) // 2
+        
+    return x, y
+
+def apply_text_watermark(image, settings):
+    """Applies a text watermark to a PIL image for final export."""
+    if not image:
+        return None
+
+    watermark_layer = create_text_watermark_layer(settings)
+    if not watermark_layer:
+        return image
+
+    if image.mode != 'RGBA':
+        image = image.convert('RGBA')
+
+    # Position
+    if "x" in settings and "y" in settings:
+        x, y = settings["x"], settings["y"]
+    else:
+        position = settings.get("position", "Center")
+        x, y = _calculate_position(image.size, watermark_layer.size, position)
+
+    # Composite the layer onto the image
+    composite_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
+    composite_layer.paste(watermark_layer, (x, y))
+    
+    watermarked_image = Image.alpha_composite(image, composite_layer)
+    return watermarked_image
+
+def apply_image_watermark(image, watermark_image, settings):
+    """Applies an image watermark to a PIL image for final export."""
+    if not image or not watermark_image:
+        return image
+
+    watermark_layer = create_image_watermark_layer(watermark_image, settings)
+
+    if image.mode != 'RGBA':
+        image = image.convert('RGBA')
+
+    # Position
+    if "x" in settings and "y" in settings:
+        x, y = settings["x"], settings["y"]
+    else:
+        position = settings.get("position", "Center")
+        x, y = _calculate_position(image.size, watermark_layer.size, position)
+
+    # Composite the layer onto the image
+    composite_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
+    composite_layer.paste(watermark_layer, (x, y), watermark_layer)
+
+    watermarked_image = Image.alpha_composite(image, composite_layer)
     return watermarked_image
