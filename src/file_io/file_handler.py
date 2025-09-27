@@ -43,8 +43,8 @@ def export_images(
     watermark_settings=None,
     prefix="",
     suffix="",
-    scale_width=None,
-    scale_height=None,
+    width_scale_ratio=1.0,
+    height_scale_ratio=1.0,
     jpeg_quality=95
 ):
     """
@@ -53,7 +53,6 @@ def export_images(
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Pre-load image watermark if it's an image type, to avoid loading it in the loop
     image_watermark_obj = None
     if watermark_settings and watermark_settings.get("type") == "image":
         image_path = watermark_settings.get("image_path")
@@ -64,23 +63,19 @@ def export_images(
         try:
             with Image.open(image_path) as img:
                 # Apply watermark first
-                if watermark_settings:
+                if watermark_settings and watermark_settings.get("type") != "none": # Add a way to disable watermarking
                     if watermark_settings.get("type") == "text":
                         img = apply_text_watermark(img, watermark_settings)
                     elif image_watermark_obj:
                         img = apply_image_watermark(img, image_watermark_obj, watermark_settings)
 
-                # Handle scaling
-                if scale_width and scale_height:
-                    img = img.resize((scale_width, scale_height), Image.Resampling.LANCZOS)
-                elif scale_width:
-                    width_percent = (scale_width / float(img.size[0]))
-                    new_height = int((float(img.size[1]) * float(width_percent)))
-                    img = img.resize((scale_width, new_height), Image.Resampling.LANCZOS)
-                elif scale_height:
-                    height_percent = (scale_height / float(img.size[1]))
-                    new_width = int((float(img.size[0]) * float(height_percent)))
-                    img = img.resize((new_width, scale_height), Image.Resampling.LANCZOS)
+                # Handle scaling based on ratios
+                if width_scale_ratio != 1.0 or height_scale_ratio != 1.0:
+                    orig_width, orig_height = img.size
+                    new_width = int(orig_width * width_scale_ratio)
+                    new_height = int(orig_height * height_scale_ratio)
+                    if new_width > 0 and new_height > 0:
+                        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
                 # Construct new filename
                 original_filename = os.path.basename(image_path)

@@ -19,7 +19,7 @@ class MainWindow(TkinterDnD.Tk):
         super().__init__()
 
         self.title("Image Watermark Tool")
-        self.geometry("1600x1200")
+        self.geometry("1600x1000")
         self.templates_data = {}
 
         # --- Main Layout --- #
@@ -164,13 +164,6 @@ class ExportDialog(tk.Toplevel):
             messagebox.showwarning("No Output Directory", "Please select an output directory.", parent=self)
             return
 
-        try:
-            scale_width = int(settings["scale_width"]) if settings["scale_width"] else None
-            scale_height = int(settings["scale_height"]) if settings["scale_height"] else None
-        except ValueError:
-            messagebox.showerror("Invalid Scale", "Please enter valid integers for scaling.", parent=self)
-            return
-
         # Get the final watermark settings from the edit frame for the export
         watermark_settings = self.parent.watermark_edit_frame.get_current_settings()
 
@@ -180,8 +173,8 @@ class ExportDialog(tk.Toplevel):
             watermark_settings=watermark_settings,
             prefix=settings["prefix"],
             suffix=settings["suffix"],
-            scale_width=scale_width,
-            scale_height=scale_height,
+            width_scale_ratio=settings["width_scale_ratio"],
+            height_scale_ratio=settings["height_scale_ratio"],
             jpeg_quality=settings["jpeg_quality"]
         )
 
