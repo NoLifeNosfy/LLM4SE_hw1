@@ -96,6 +96,16 @@ def create_image_watermark_layer(watermark_image, settings):
     if watermark_image.mode != 'RGBA':
         watermark_image = watermark_image.convert('RGBA')
 
+    # Scaling
+    width_scale = settings.get("width_scale", 1.0)
+    height_scale = settings.get("height_scale", 1.0)
+    if width_scale != 1.0 or height_scale != 1.0:
+        orig_width, orig_height = watermark_image.size
+        new_width = int(orig_width * width_scale)
+        new_height = int(orig_height * height_scale)
+        if new_width > 0 and new_height > 0:
+            watermark_image = watermark_image.resize((new_width, new_height), Image.LANCZOS)
+
     # Opacity
     opacity = float(settings.get("opacity", 1.0))
     if opacity < 1.0:

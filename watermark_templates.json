@@ -1,0 +1,47 @@
+{
+    "__metadata__": {
+        "last_used": "Last Session"
+    },
+    "templates": {
+        "hachimi": {
+            "position": "Custom",
+            "opacity": 0.4,
+            "rotation": 0,
+            "text": "\u54c8\u57fa\u7c73\u54e6\u5a1c\u7f8e\u9c81\u591a",
+            "font_family": "SimSun",
+            "font_size": 36,
+            "bold": false,
+            "italic": false,
+            "font_color": "#edfa00",
+            "shadow": true,
+            "shadow_size": 10,
+            "stroke": true,
+            "stroke_size": 1,
+            "stroke_color": "#00FFFF",
+            "x": 233,
+            "y": 82,
+            "type": "text"
+        },
+        "Last Session": {
+            "position": "Top-Left",
+            "opacity": 1.0,
+            "rotation": 0,
+            "text": "\u54c8\u57fa\u7c73\u54e6\u5a1c\u7f8e\u9c81\u591a",
+            "font_family": "SimSun",
+            "font_size": 36,
+            "bold": false,
+            "italic": false,
+            "font_color": "#edfa00",
+            "shadow": true,
+            "shadow_size": 10,
+            "stroke": true,
+            "stroke_size": 1,
+            "stroke_color": "#00FFFF",
+            "type": "image",
+            "image_path": "C:/Users/hanbo/Desktop/images/\u8bf4\u7684\u9053\u7406.png",
+            "width_scale": 0.1,
+            "height_scale": 0.1,
+            "bind_ratio": true
+        }
+    }
+}

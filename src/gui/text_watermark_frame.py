@@ -133,6 +133,23 @@ class TextWatermarkFrame(ttk.Frame):
         self.stroke_color_button.config(bg=color)
         window.destroy()
 
+    def set_settings(self, settings):
+        """Applies a settings dictionary to the UI controls."""
+        self.text_entry.delete(0, tk.END)
+        self.text_entry.insert(0, settings.get("text", ""))
+        self.font_family.set(settings.get("font_family", "SimSun"))
+        self.font_size.set(settings.get("font_size", 36))
+        self.bold_var.set(settings.get("bold", False))
+        self.italic_var.set(settings.get("italic", False))
+        self.font_color_var.set(settings.get("font_color", "#000000"))
+        self.color_button.config(bg=self.font_color_var.get())
+        self.shadow_var.set(settings.get("shadow", False))
+        self.shadow_size_var.set(settings.get("shadow_size", 2))
+        self.stroke_var.set(settings.get("stroke", False))
+        self.stroke_size_var.set(settings.get("stroke_size", 1))
+        self.stroke_color_var.set(settings.get("stroke_color", "#000000"))
+        self.stroke_color_button.config(bg=self.stroke_color_var.get())
+
     def get_settings(self):
         """Returns the current text watermark settings."""
         return {

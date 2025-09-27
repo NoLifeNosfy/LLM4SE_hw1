@@ -62,7 +62,7 @@ class WatermarkEditFrame(ttk.LabelFrame):
         action_buttons = ttk.Frame(self)
         action_buttons.grid(row=2, column=0, sticky="e", pady=(10,0))
         ttk.Button(action_buttons, text="Update Preview", command=self.update_watermark_preview).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(action_buttons, text="Remove Watermark", command=self.preview_frame.clear_watermark).pack(side=tk.RIGHT)
+        ttk.Button(action_buttons, text="Remove Watermark", command=lambda: self.preview_frame.clear_watermark()).pack(side=tk.RIGHT)
 
     def _set_position(self, pos_string):
         self.position_var.set(pos_string)
@@ -78,6 +78,48 @@ class WatermarkEditFrame(ttk.LabelFrame):
         self.watermark_settings['x'] = new_pos['x']
         self.watermark_settings['y'] = new_pos['y']
         self.watermark_settings['position'] = "Custom"
+
+    def get_current_settings(self):
+        """Collects all current settings from the UI into a dictionary."""
+        settings = self.watermark_settings.copy()
+        settings["opacity"] = self.opacity_var.get() / 100.0
+        settings["rotation"] = self.rotation_var.get()
+
+        current_tab = self.notebook.index("current")
+        if current_tab == 0:
+            settings["type"] = "text"
+            settings.update(self.text_watermark_frame.get_settings())
+        else:
+            settings["type"] = "image"
+            settings.update(self.image_watermark_frame.get_settings())
+            # Also need to save the image path if possible
+            settings["image_path"] = self.image_watermark_frame.image_path_var.get()
+
+        return settings
+
+    def set_settings(self, settings):
+        """Applies a settings dictionary to the entire UI."""
+        self.watermark_settings = settings.copy()
+
+        # Set common settings
+        self.opacity_var.set(int(settings.get("opacity", 1.0) * 100))
+        self.rotation_var.set(settings.get("rotation", 0))
+        self.position_var.set(settings.get("position", "Center"))
+
+        # Set specific settings
+        if settings.get("type") == "text":
+            self.notebook.select(0)
+            # This requires TextWatermarkFrame to have a set_settings method
+            if hasattr(self.text_watermark_frame, "set_settings"):
+                self.text_watermark_frame.set_settings(settings)
+        elif settings.get("type") == "image":
+            self.notebook.select(1)
+            # This requires ImageWatermarkFrame to have a set_settings method
+            if hasattr(self.image_watermark_frame, "set_settings"):
+                self.image_watermark_frame.set_settings(settings)
+        
+        # Update the preview with the new settings
+        self.update_watermark_preview()
 
     def update_watermark_preview(self):
         """Gathers all settings, creates a watermark layer, and tells the preview frame to draw it."""
@@ -101,6 +143,8 @@ class WatermarkEditFrame(ttk.LabelFrame):
         else: # Image watermark
             watermark_image = self.image_watermark_frame.get_watermark_image()
             if watermark_image:
+                img_settings = self.image_watermark_frame.get_settings()
+                self.watermark_settings.update(img_settings)
                 watermark_layer = create_image_watermark_layer(watermark_image.copy(), self.watermark_settings)
 
         if watermark_layer:

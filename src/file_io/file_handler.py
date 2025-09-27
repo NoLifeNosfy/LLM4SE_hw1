@@ -1,16 +1,13 @@
 import os
 from datetime import datetime
 from PIL import Image
+from watermarking.watermark import apply_text_watermark, apply_image_watermark
 
 def get_image_paths(path, recursive=False):
     """
     Yields image file paths from a given path.
-
-    :param path: Path to a file or directory.
-    :param recursive: If True, searches subdirectories recursively.
     """
     image_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')
-
     if os.path.isfile(path):
         if path.lower().endswith(image_extensions):
             yield path
@@ -38,12 +35,12 @@ def get_watermark_text(image_path):
         return creation_time_str.split(" ")[0].replace(":", "-")
     else:
         m_time = os.path.getmtime(image_path)
-        print(f"Warning: No EXIF creation time for {os.path.basename(image_path)}. Using modification date.")
         return datetime.fromtimestamp(m_time).strftime('%Y-%m-%d')
 
 def export_images(
     image_paths,
     output_dir,
+    watermark_settings=None,
     prefix="",
     suffix="",
     scale_width=None,
@@ -51,22 +48,28 @@ def export_images(
     jpeg_quality=95
 ):
     """
-    Exports images with various processing options.
-
-    :param image_paths: List of paths to the images to export.
-    :param output_dir: Directory to save the exported images.
-    :param prefix: Custom prefix to add to filenames.
-    :param suffix: Custom suffix to add to filenames.
-    :param scale_width: New width for scaling. If only width is given, height is scaled to maintain aspect ratio.
-    :param scale_height: New height for scaling. If only height is given, width is scaled to maintain aspect ratio.
-    :param jpeg_quality: Compression quality for JPEG files (1-100).
+    Exports images with various processing options, including applying a watermark.
     """
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    # Pre-load image watermark if it's an image type, to avoid loading it in the loop
+    image_watermark_obj = None
+    if watermark_settings and watermark_settings.get("type") == "image":
+        image_path = watermark_settings.get("image_path")
+        if image_path and os.path.exists(image_path):
+            image_watermark_obj = Image.open(image_path)
+
     for image_path in image_paths:
         try:
             with Image.open(image_path) as img:
+                # Apply watermark first
+                if watermark_settings:
+                    if watermark_settings.get("type") == "text":
+                        img = apply_text_watermark(img, watermark_settings)
+                    elif image_watermark_obj:
+                        img = apply_image_watermark(img, image_watermark_obj, watermark_settings)
+
                 # Handle scaling
                 if scale_width and scale_height:
                     img = img.resize((scale_width, scale_height), Image.Resampling.LANCZOS)
@@ -87,7 +90,6 @@ def export_images(
 
                 # Save the image
                 if ext.lower() in ['.jpg', '.jpeg']:
-                    # Convert to RGB if it's not, to avoid errors when saving as JPEG
                     if img.mode in ('RGBA', 'P'):
                         img = img.convert('RGB')
                     img.save(output_path, 'JPEG', quality=jpeg_quality)
