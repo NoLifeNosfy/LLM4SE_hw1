@@ -15,7 +15,7 @@ _watermark/
 .vscode/
 
 # sth else
-gemini.ps1
+./gemini.ps1
 watermark_templates.json 
 build/  
 dist/  
