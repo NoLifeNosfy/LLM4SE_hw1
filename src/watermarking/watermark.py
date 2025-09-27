@@ -10,6 +10,91 @@ COLOR_MAP = {
     "blue": (0, 0, 255, 128),
 }
 
+def apply_image_watermark(image, watermark_image, settings):
+    """Applies an image watermark to a PIL image based on a settings dictionary.
+    
+    Args:
+        image: The original PIL image to apply the watermark to
+        watermark_image: The PIL image to use as a watermark
+        settings: Dictionary containing watermark settings (opacity, position, etc.)
+        
+    Returns:
+        A new PIL image with the watermark applied
+    """
+    if not image or not watermark_image:
+        return image
+    
+    # Convert images to RGBA if they aren't already
+    if image.mode != 'RGBA':
+        image = image.convert('RGBA')
+    if watermark_image.mode != 'RGBA':
+        watermark_image = watermark_image.convert('RGBA')
+    
+    # Scale watermark to be no larger than 1/3 of the original image dimensions
+    orig_width, orig_height = image.size
+    wm_width, wm_height = watermark_image.size
+    
+    # Calculate the maximum allowed dimensions (1/3 of original)
+    max_width = orig_width // 3
+    max_height = orig_height // 3
+    
+    # Calculate scaling factor if watermark is too large
+    scale_factor = 1.0
+    if wm_width > max_width or wm_height > max_height:
+        width_ratio = max_width / wm_width
+        height_ratio = max_height / wm_height
+        scale_factor = min(width_ratio, height_ratio)
+        
+        # Resize the watermark
+        new_width = int(wm_width * scale_factor)
+        new_height = int(wm_height * scale_factor)
+        watermark_image = watermark_image.resize((new_width, new_height), Image.LANCZOS)
+        wm_width, wm_height = watermark_image.size
+    
+    # Apply opacity
+    opacity = float(settings.get("opacity", 1.0))
+    if opacity < 1.0:
+        # Create a new image with an alpha channel for transparency
+        alpha = watermark_image.getchannel('A')
+        alpha = alpha.point(lambda x: int(x * opacity))
+        watermark_image.putalpha(alpha)
+    
+    # Determine position
+    position = settings.get("position", "Center")
+    
+    if "Left" in position:
+        x = 10  # margin
+    elif "Right" in position:
+        x = orig_width - wm_width - 10
+    else:  # Center
+        x = (orig_width - wm_width) // 2
+        
+    if "Top" in position:
+        y = 10  # margin
+    elif "Bottom" in position:
+        y = orig_height - wm_height - 10
+    else:  # Middle or Center
+        y = (orig_height - wm_height) // 2
+    
+    # Apply rotation if specified
+    rotation = settings.get("rotation", 0)
+    if rotation != 0:
+        watermark_image = watermark_image.rotate(rotation, expand=True, resample=Image.BICUBIC)
+        # Recalculate width and height after rotation
+        wm_width, wm_height = watermark_image.size
+        
+        # Adjust position to keep it centered after rotation
+        if "Center" in position or "Middle" in position:
+            x = (orig_width - wm_width) // 2
+            y = (orig_height - wm_height) // 2
+    
+    # Create a new image to paste the watermark onto
+    result = image.copy()
+    # Paste using the watermark as its own mask to preserve transparency
+    result.paste(watermark_image, (x, y), watermark_image)
+    
+    return result
+
 def apply_text_watermark(image, settings):
     """Applies a text watermark to a PIL image based on a settings dictionary."""
     if not image:

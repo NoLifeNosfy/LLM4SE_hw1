@@ -3,7 +3,8 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image
 from gui.text_watermark_frame import TextWatermarkFrame
-from watermarking.watermark import apply_text_watermark
+from gui.image_watermark_frame import ImageWatermarkFrame
+from watermarking.watermark import apply_text_watermark, apply_image_watermark
 
 class WatermarkEditFrame(ttk.LabelFrame):
     def __init__(self, parent, preview_frame):
@@ -26,9 +27,12 @@ class WatermarkEditFrame(ttk.LabelFrame):
         self.text_watermark_frame.pack(fill=tk.BOTH, expand=True)
 
         # --- Image Watermark Tab ---
-        image_watermark_frame = ttk.Frame(self.notebook, padding="10")
-        self.notebook.add(image_watermark_frame, text="Image Watermark")
-        ttk.Label(image_watermark_frame, text="Image-specific watermark settings placeholder.").pack()
+        image_watermark_tab_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(image_watermark_tab_frame, text="Image Watermark")
+        
+        # 使用ImageWatermarkFrame类
+        self.image_watermark_frame = ImageWatermarkFrame(image_watermark_tab_frame)
+        self.image_watermark_frame.pack(fill=tk.BOTH, expand=True)
 
         # --- Common Settings Area ---
         common_settings_frame = ttk.LabelFrame(self, text="Common Settings", padding="10")
@@ -80,19 +84,43 @@ class WatermarkEditFrame(ttk.LabelFrame):
         confirm_button = ttk.Button(action_buttons_frame, text="Confirm", command=self.apply_watermark)
         confirm_button.pack(side=tk.RIGHT)
 
+
+    
     def apply_watermark(self):
+        """应用水印到原图"""
         if not self.preview_frame.original_image:
             return
-
-        settings = self.text_watermark_frame.get_settings()
-        # Add common settings
-        settings["opacity"] = self.opacity_var.get() / 100.0
-        settings["rotation"] = self.rotation_var.get()
-        settings["position"] = self.position_var.get()
-
-        # 使用原始图像应用水印，而不是当前显示的图像
-        # 这样可以确保每次都是在原始图像上添加水印，而不是叠加
-        watermarked_image = apply_text_watermark(self.preview_frame.original_image.copy(), settings)
+            
+        # 获取通用设置
+        settings = {
+            "opacity": self.opacity_var.get() / 100.0,
+            "rotation": self.rotation_var.get(),
+            "position": self.position_var.get()
+        }
+        
+        # 根据当前选择的标签页决定应用文本水印还是图片水印
+        current_tab = self.notebook.index("current")
+        
+        if current_tab == 0:  # 文本水印
+            # 获取文本水印设置
+            text_settings = self.text_watermark_frame.get_settings()
+            # 合并设置
+            settings.update(text_settings)
+            # 应用文本水印
+            watermarked_image = apply_text_watermark(self.preview_frame.original_image.copy(), settings)
+        else:  # 图片水印
+            # 获取水印图片
+            watermark_image = self.image_watermark_frame.get_watermark_image()
+            # 检查是否有水印图片
+            if not watermark_image:
+                return
+                
+            # 应用图片水印
+            watermarked_image = apply_image_watermark(
+                self.preview_frame.original_image.copy(), 
+                watermark_image.copy(), 
+                settings
+            )
         
         if watermarked_image:
             # 更新预览显示，但保留原始图像不变
