@@ -19,7 +19,7 @@ class MainWindow(TkinterDnD.Tk):
         super().__init__()
 
         self.title("Image Watermark Tool")
-        self.geometry("1600x800")
+        self.geometry("1600x1200")
         self.templates_data = {}
 
         # --- Main Layout --- #
