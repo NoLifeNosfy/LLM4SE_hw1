@@ -30,26 +30,9 @@ def apply_image_watermark(image, watermark_image, settings):
     if watermark_image.mode != 'RGBA':
         watermark_image = watermark_image.convert('RGBA')
     
-    # Scale watermark to be no larger than 1/3 of the original image dimensions
+    # 获取图像尺寸
     orig_width, orig_height = image.size
     wm_width, wm_height = watermark_image.size
-    
-    # Calculate the maximum allowed dimensions (1/3 of original)
-    max_width = orig_width // 3
-    max_height = orig_height // 3
-    
-    # Calculate scaling factor if watermark is too large
-    scale_factor = 1.0
-    if wm_width > max_width or wm_height > max_height:
-        width_ratio = max_width / wm_width
-        height_ratio = max_height / wm_height
-        scale_factor = min(width_ratio, height_ratio)
-        
-        # Resize the watermark
-        new_width = int(wm_width * scale_factor)
-        new_height = int(wm_height * scale_factor)
-        watermark_image = watermark_image.resize((new_width, new_height), Image.LANCZOS)
-        wm_width, wm_height = watermark_image.size
     
     # Apply opacity
     opacity = float(settings.get("opacity", 1.0))
